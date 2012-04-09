@@ -2,16 +2,26 @@
 <html>
   <head>
     <title>Space Demo</title>
+	<link href="stylesheets/screen.css" media="all" rel="stylesheet" type="text/css"/>
+    <script language="javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.4.4/jquery.min.js" type="text/javascript"></script>
+	<script language="javascript" src="javascripts/jquery.hotkeys.js" type="text/javascript"></script>
+	<script language="javascript" src="javascripts/key_status.js" type="text/javascript"></script>
+	<script language="javascript" src="javascripts/util.js" type="text/javascript"></script>
+	<script language="javascript" src="javascripts/sprite.js" type="text/javascript"></script>
+	<script language="javascript" src="javascripts/sound.js" type="text/javascript"></script>
   </head>
   <body>
     <h1>Space Blah</h1>
-	<script language="javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.4.4/jquery.min.js" type="text/javascript"></script>
+	
     <script type='text/javascript'>
 	  var CANVAS_WIDTH = 480;
       var CANVAS_HEIGHT = 320;
 	  var textX = 50;
 	  var textY = 50;
 	  var FPS = 30;
+	  var playerSpeed = 5;
+	  var playerDirection = 0;
+	  var playerBullets = [];
 	  
 	  
       var canvasElement = $("<canvas width='" + CANVAS_WIDTH + 
@@ -36,14 +46,96 @@
         draw();
       }, 1000/FPS);
 	  
-     function update() {
-		textX += 1;
-		textY += 1;
+      function update() {
+	    if (keydown.left) {
+          player.x -= playerSpeed;
+		  playerDirection = -1;
+        }
+
+        if (keydown.right) {
+          player.x += playerSpeed;
+		  playerDirection = 1;
+        }
+		
+		if(keydown.right && keydown.left) {
+		  playerDirection = 0;
+		}
+		
+		if(!keydown.right && !keydown.left) {
+		  playerDirection = 0;
+		}
+		
+		if (keydown.space) {
+	      player.shoot();
+	    }
+		
+	    player.x = player.x.clamp(0, CANVAS_WIDTH - player.width);
+		
+		//Update the bullets
+		playerBullets.forEach(function(bullet) {
+		  bullet.update();
+		});
+		
+		//Remove unactive bullets
+		playerBullets = playerBullets.filter(function(bullet) {
+		  return bullet.active;
+		});
 	  }
+	  
 	  function draw() {
 	    canvas.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
         player.draw();
+		playerBullets.forEach(function(bullet) {
+		  bullet.draw();
+		});
       }	  
+	  player.shoot = function() {
+	    var bulletPosition = this.midpoint();
+		
+		playerBullets.push(Bullet({
+		  speed: 5,
+		  x: bulletPosition.x,
+		  y: bulletPosition.y
+		}));
+	    console.log("Pew pew");
+	  };
+	  
+	  player.midpoint = function() {
+	    return {
+		  x: this.x + this.width/2,
+		  y: this.y + this.height/2
+		};
+	  };
+	  
+	  //Bullet Object
+	  function Bullet(bullet) {
+	    bullet.active = true;
+		//Shoot like Binding of Isaac. Awww yeaaah.
+		bullet.xVelocity = bullet.speed*playerDirection;
+		bullet.yVelocity = -bullet.speed;
+		bullet.width = 3;
+		bullet.height = 3;
+		bullet.color = "#100";
+		
+		bullet.inBounds = function() {
+		  return bullet.x >= 0 && bullet.x <= CANVAS_WIDTH &&
+		    bullet.y >= 0 && bullet.y <= CANVAS_HEIGHT;
+		};
+		
+		bullet.draw = function() {
+		  canvas.fillStyle = this.color;
+		  canvas.fillRect(this.x, this.y, this.width, this.height);
+		};
+		
+		bullet.update = function() {
+		  bullet.x += bullet.xVelocity;
+		  bullet.y += bullet.yVelocity;
+		  
+		  bullet.active = bullet.active && bullet.inBounds();
+		};
+		
+		return bullet;
+	  }
 	  
 	  </script>
   </body>
